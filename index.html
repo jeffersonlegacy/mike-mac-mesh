@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multi-Node Local LLM &amp; Agent Lab — Agent Desk &amp; OpenClaw Agora Simulator</title>
+    <meta
+      name="description"
+      content="Distributed local LLM inference mesh (Debian Linux zram + Ollama + 2.5GbE LAN + Tailscale) governed by Agent Desk routing and OpenClaw Agora multi-agent council checkpoints."
+    />
+    <style>
+      :root {
+        --bg: #050811;
+        --panel: #0f172a;
+        --border: #1e293b;
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --cyan: #38bdf8;
+        --emerald: #34d399;
+        --amber: #f59e0b;
+        --purple: #a78bfa;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+        background: radial-gradient(circle at top, #0f172a 0%, #050811 100%);
+        color: var(--text);
+        min-height: 100vh;
+        line-height: 1.5;
+      }
+      .container {
+        max-width: 1220px;
+        margin: 0 auto;
+        padding: 1.5rem;
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding-bottom: 1.2rem;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 1.5rem;
+      }
+      .badge {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 0.25rem 0.65rem;
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.14);
+        color: var(--cyan);
+        border: 1px solid rgba(56, 189, 248, 0.35);
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.48rem 0.9rem;
+        border-radius: 0.5rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        border: 1px solid var(--border);
+        background: #1e293b;
+        color: var(--text);
+      }
+      .btn:hover {
+        border-color: var(--cyan);
+      }
+      .btn-primary {
+        background: var(--cyan);
+        color: #020617;
+        border-color: var(--cyan);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1.15fr;
+        gap: 1.4rem;
+      }
+      @media (max-width: 960px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .card {
+        background: rgba(15, 23, 42, 0.88);
+        border: 1px solid var(--border);
+        border-radius: 0.85rem;
+        padding: 1.25rem;
+        box-shadow: 0 18px 36px rgba(0, 0, 0, 0.35);
+      }
+      .card h2 {
+        margin: 0 0 0.75rem 0;
+        font-size: 1rem;
+      }
+      .node-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.7rem;
+        margin-bottom: 1rem;
+      }
+      .node-box {
+        background: #020617;
+        border: 1px solid var(--border);
+        border-radius: 0.65rem;
+        padding: 0.8rem;
+      }
+      .node-title {
+        font-size: 0.75rem;
+        font-family: ui-monospace, SFMono-Regular, monospace;
+        color: var(--cyan);
+        margin-bottom: 0.25rem;
+      }
+      .node-stat {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+      .prompt-input {
+        width: 100%;
+        background: #020617;
+        border: 1px solid var(--border);
+        border-radius: 0.55rem;
+        padding: 0.65rem 0.8rem;
+        color: var(--text);
+        font-family: ui-monospace, SFMono-Regular, monospace;
+        font-size: 0.82rem;
+        margin-bottom: 0.65rem;
+      }
+      pre {
+        margin: 0;
+        background: #020617;
+        border: 1px solid var(--border);
+        border-radius: 0.65rem;
+        padding: 0.85rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.75rem;
+        color: #a7f3d0;
+        max-height: 250px;
+        overflow: auto;
+      }
+      .seat-list {
+        display: grid;
+        gap: 0.45rem;
+        margin-bottom: 0.85rem;
+      }
+      .seat-row {
+        background: #020617;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        padding: 0.55rem 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div style="display: flex; align-items: center; gap: 0.75rem">
+          <span class="badge">DEBIAN ZRAM + OLLAMA + 2.5GbE + OPENCLAW</span>
+          <h1 style="margin: 0; font-size: 1.35rem">
+            Multi-Node Local LLM &amp; Agent Lab (`homelab-agent-mesh`)
+          </h1>
+        </div>
+        <div style="display: flex; gap: 0.6rem; flex-wrap: wrap">
+          <a
+            href="https://github.com/jeffersonlegacy/homelab-agent-mesh"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn"
+            >GitHub Repository ↗</a
+          >
+          <a
+            href="https://michael-jefferson-portfolio.vercel.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn"
+            >← Portfolio</a
+          >
+        </div>
+      </header>
+
+      <div class="node-grid">
+        <div class="node-box">
+          <div class="node-title">NODE 01 · M2 MAC MINI (forge-m2)</div>
+          <div style="font-weight: 700; margin-bottom: 0.2rem">Primary Control Plane</div>
+          <div class="node-stat">Agent Desk Router (`agentdesk`) · OpenClaw Agora Steward · Cursor / Codex</div>
+        </div>
+        <div class="node-box">
+          <div class="node-title">BACKBONE · 2.5GbE LAN + TAILSCALE</div>
+          <div style="font-weight: 700; margin-bottom: 0.2rem">Dual-Path Interconnect</div>
+          <div class="node-stat">Sub-ms wired 2.5GbE token streaming with automatic Tailscale Mesh VPN failover</div>
+        </div>
+        <div class="node-box">
+          <div class="node-title">NODE 02 · DEBIAN SERVER (forge-dellmac)</div>
+          <div style="font-weight: 700; margin-bottom: 0.2rem">Headless Inference &amp; Batch Node</div>
+          <div class="node-stat">Kernel `zram` compressed swap · Local Ollama endpoints · Playwright/Docker workers</div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <!-- LEFT: AGENT DESK ROUTER SIMULATOR -->
+        <div class="card">
+          <h2>1. `agentdesk route` — File-First Context Engineering Router</h2>
+          <p style="font-size: 0.82rem; color: var(--muted); margin-top: 0">
+            Test the deterministic keyword scorer from <code>agent-desk/scripts/agentdesk.py</code>. Routes coding agents to minimal task-scoped Markdown playbooks instead of scanning the entire workspace.
+          </p>
+
+          <div style="display: flex; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.65rem">
+            <button class="btn" data-task="deploy nextjs runtime bug in repo">🐛 Repo Runtime &amp; Deploy</button>
+            <button class="btn" data-task="optimize token context scope and verify">⚡ Token Efficiency</button>
+            <button class="btn" data-task="package reusable agent workflow markdown script">📦 Workflow Authoring</button>
+            <button class="btn" data-task="run heavy docker playwright batch on dellmac">🖥️ Remote Dellmac Batch</button>
+          </div>
+
+          <input
+            type="text"
+            id="task-query"
+            class="prompt-input"
+            value="deploy nextjs runtime bug in repo and run playwright verification on dellmac"
+          />
+
+          <button class="btn btn-primary" id="btn-route" style="width: 100%; justify-content: center; margin-bottom: 0.85rem">
+            ▶ Execute `agentdesk route` + OpenClaw Agora `decide_route()`
+          </button>
+
+          <h2>Selected `Agent Desk` Playbook Output</h2>
+          <pre id="desk-output"></pre>
+        </div>
+
+        <!-- RIGHT: OPENCLAW AGORA MULTI-AGENT COUNCIL & WORKER ROUTER -->
+        <div class="card">
+          <h2>2. OpenClaw `agora` Multi-Agent Council &amp; Worker Dispatch</h2>
+          <p style="font-size: 0.82rem; color: var(--muted); margin-top: 0">
+            Executes the exact routing logic from <code>openclaw-agora/router.py</code> and <code>council.py</code>—assigning tasks to <code>forge-m2</code> or <code>forge-dellmac</code> and ordering the 5-seat checkpointed council.
+          </p>
+
+          <div class="seat-list" id="council-seats"></div>
+
+          <h2>Deterministic `council/state.json` Routing Decision</h2>
+          <pre id="agora-output"></pre>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const DESK_ROUTES = {
+        'project-work': {
+          tags: ['repo', 'code', 'app', 'bug', 'runtime', 'deploy', 'project', 'nextjs'],
+          summary: 'Identify the real checkout and follow its local instructions.',
+          playbook: `# Route: project work (~/Documents/Agent Desk/routes/project-work.md)
+1. Identify the real checkout, branch, dirty state, and serving process before editing.
+2. Read only the repo's entry instructions, relevant route/source files, and required dependencies.
+3. Follow local AGENTS.md, skills, build/deploy procedure, and runtime conventions.
+4. Make the smallest coherent change. Do not scan unrelated projects.
+5. Verify the requested outcome at the appropriate runtime level.`
+        },
+        'efficient-agent-work': {
+          tags: ['token', 'context', 'efficient', 'scope', 'plan', 'verify'],
+          summary: 'Load only the route and evidence needed for the outcome.',
+          playbook: `# Route: efficient agent work (~/Documents/Agent Desk/routes/efficient-agent-work.md)
+1. State desired outcome in one sentence.
+2. Route to one playbook; inspect one authoritative source before secondary sources.
+3. Batch dependent edits into one coherent change.
+4. Return concise evidence: changed paths, outcome, verification.`
+        },
+        'workflow-authoring': {
+          tags: ['skill', 'workflow', 'markdown', 'script', 'reusable', 'agent'],
+          summary: 'Keep decisions in markdown and deterministic steps in scripts.',
+          playbook: `# Route: workflow authoring (~/Documents/Agent Desk/routes/workflow-authoring.md)
+1. Keep policy/routing decisions in concise Markdown playbooks.
+2. Put repeatable deterministic operations in scripts/ with dry-run support.`
+        }
+      };
+
+      const COUNCIL = {
+        bubba: { name: 'Bubba', title: 'Chair', mandate: 'Synthesize final decision & own outcome' },
+        b2b2: { name: 'B2b2', title: 'Innovation Lead', mandate: 'Architecture, strategy & high-leverage design' },
+        myboy: { name: 'Myboy', title: 'Execution Lead', mandate: 'Hardware, sequencing, timing & finishable work' },
+        potna: { name: 'Potna', title: 'Momentum Lead', mandate: 'Combine room ideas & drive action velocity' },
+        karen: { name: 'Karen', title: 'Risk Lead', mandate: 'Surface failure modes & hidden production risks' }
+      };
+
+      function evaluateQuery(q) {
+        const text = q.toLowerCase();
+        const words = new Set(text.replace(/[^a-z0-9]+/g, ' ').split(' ').filter(Boolean));
+
+        let bestDesk = 'project-work';
+        let bestScore = -1;
+        for (const [key, cfg] of Object.entries(DESK_ROUTES)) {
+          const score = cfg.tags.filter((t) => words.has(t) || text.includes(t)).length;
+          if (score > bestScore) {
+            bestScore = score;
+            bestDesk = key;
+          }
+        }
+
+        const archKeywords = ['architecture', 'design', 'router', 'workflow', 'spec', 'system', 'plan', 'strategy'];
+        const implKeywords = ['build', 'implement', 'fix', 'patch', 'code', 'script', 'run', 'debug', 'test', 'deploy'];
+        const heavyKeywords = ['docker', 'scrape', 'browser', 'playwright', 'media', 'batch', 'remote', 'dellmac'];
+        const highRiskKeywords = ['delete', 'destroy', 'production', 'deploy', 'publish', 'secret', 'webhook'];
+
+        const archScore = archKeywords.filter((k) => text.includes(k)).length;
+        const implScore = implKeywords.filter((k) => text.includes(k)).length;
+        const heavyScore = heavyKeywords.filter((k) => text.includes(k)).length;
+        const riskScore = highRiskKeywords.filter((k) => text.includes(k)).length;
+
+        const planningLead = archScore >= implScore ? 'b2b2' : 'myboy';
+        const assignedWorker = heavyScore > 0 ? 'forge-dellmac (Debian Linux + Ollama + zram)' : 'forge-m2 (M2 Mac mini Control Plane)';
+        const riskLevel = riskScore > 0 ? 'high' : 'medium';
+        const order = Array.from(new Set([planningLead, 'potna', 'b2b2', 'myboy', 'karen', 'bubba']));
+
+        document.getElementById('desk-output').textContent =
+          `$ agentdesk route "${q}"\n` +
+          `${bestDesk}: ${DESK_ROUTES[bestDesk].summary}\n\n` +
+          DESK_ROUTES[bestDesk].playbook;
+
+        document.getElementById('council-seats').innerHTML = order
+          .map(
+            (id, idx) => `
+            <div class="seat-row">
+              <div>
+                <strong style="color:var(--cyan)">Turn ${idx + 1} · ${COUNCIL[id].name} (${COUNCIL[id].title})</strong>
+                <div style="color:var(--muted);font-size:0.74rem">${COUNCIL[id].mandate}</div>
+              </div>
+              <span class="badge">${id === planningLead ? 'FIRST TURN' : id === 'bubba' ? 'FINAL CHAIR' : 'CHECKPOINT'}</span>
+            </div>
+          `
+          )
+          .join('');
+
+        const agoraDecision = {
+          mode: riskLevel === 'high' ? 'council-debate' : 'council-execution',
+          assigned_worker: assignedWorker,
+          interconnect: heavyScore > 0 ? '2.5GbE Wired LAN -> ssh dellmac (Tailscale failover ready)' : 'Local M2 NVMe bus',
+          planning_lead: planningLead,
+          review_lead: 'karen',
+          synthesis_lead: 'bubba',
+          council_order: order,
+          risk_level: riskLevel,
+          scores: {
+            architecture_score: archScore,
+            implementation_score: implScore,
+            heavy_workload_score: heavyScore
+          }
+        };
+
+        document.getElementById('agora-output').textContent = JSON.stringify(agoraDecision, null, 2);
+      }
+
+      document.getElementById('btn-route').addEventListener('click', () => {
+        evaluateQuery(document.getElementById('task-query').value);
+      });
+
+      document.querySelectorAll('[data-task]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.getElementById('task-query').value = btn.dataset.task;
+          evaluateQuery(btn.dataset.task);
+        });
+      });
+
+      evaluateQuery(document.getElementById('task-query').value);
+    </script>
+  </body>
+</html>

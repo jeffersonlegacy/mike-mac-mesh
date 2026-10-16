@@ -1,0 +1,22 @@
+{
+  "task_id": "agora-20260306-001",
+  "created_at": "2026-03-06T12:00:00-08:00",
+  "updated_at": "2026-03-06T12:00:00-08:00",
+  "source": "telegram",
+  "request_text": "Build a safer Telegram automation layer for my media stack.",
+  "status": "new",
+  "priority": "normal",
+  "risk_level": "medium",
+  "approval_required": false,
+  "assigned_agents": [
+    "bubba",
+    "b2b2",
+    "myboy",
+    "potna",
+    "karen"
+  ],
+  "assigned_workers": [
+    "forge-m2"
+  ],
+  "final_owner": "steward"
+}
