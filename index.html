@@ -350,6 +350,10 @@
               <span>QUANTIZED MODEL FOOTPRINT: <strong id="z-model-gb" style="color: var(--amber)">6.5 GB</strong></span>
               <input type="range" id="z-slider" min="2" max="14" step="0.5" value="6.5" />
             </div>
+            <div class="zram-box mono" style="margin-top: 0.75rem">
+              <span>DAILY AGENT ROUTING SESSIONS: <strong id="z-sessions-val" style="color: var(--phosphor)">120 RUNS/DAY</strong></span>
+              <input type="range" id="z-sessions" min="20" max="500" step="20" value="120" />
+            </div>
             <div class="phase-detail" id="z-readout"></div>
           </div>
         </aside>
@@ -433,20 +437,28 @@ vm.page-cluster = 0
       });
 
       const zSlider = document.getElementById("z-slider");
+      const zSessions = document.getElementById("z-sessions");
       const zModelGb = document.getElementById("z-model-gb");
+      const zSessionsVal = document.getElementById("z-sessions-val");
       const zReadout = document.getElementById("z-readout");
 
       function updateZram() {
         const gb = Number(zSlider.value);
+        const runs = Number(zSessions.value);
         zModelGb.textContent = `${gb.toFixed(1)} GB`;
+        zSessionsVal.textContent = `${runs} RUNS/DAY`;
         const compressedSwap = (gb * 0.34).toFixed(2);
         const lanTransferSec = (gb / 0.284).toFixed(1);
+        const tokensSavedMillions = ((runs * 18088 * 30) / 1000000).toFixed(1);
+        const monthlyCloudSavings = Math.round(Number(tokensSavedMillions) * 3.0 + runs * 0.45);
         zReadout.innerHTML =
           `Physical RAM + zstd zram footprint: <strong>${compressedSwap} GB compressed swap</strong> (2.93:1 ratio)<br>` +
-          `Model weight sync over 2.5GbE LAN (284 MB/s): <strong>${lanTransferSec}s</strong> vs Wi-Fi 5 (42 MB/s): <strong>${(gb / 0.042).toFixed(1)}s</strong>`;
+          `2.5GbE LAN sync (284 MB/s): <strong>${lanTransferSec}s</strong> vs Wi-Fi 5: <strong>${(gb / 0.042).toFixed(1)}s</strong><br>` +
+          `Agent Desk + Local Ollama Arbitrage: <strong>${tokensSavedMillions}M tokens/mo saved</strong> (~<strong>$${monthlyCloudSavings}/mo</strong> cloud API reduction)`;
       }
 
       zSlider.addEventListener("input", updateZram);
+      zSessions.addEventListener("input", updateZram);
       termOut.textContent = CMDS.map;
       phaseDetail.textContent = PHASES.INTAKE;
       updateZram();
