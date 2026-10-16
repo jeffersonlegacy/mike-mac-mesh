@@ -3,372 +3,453 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Multi-Node Local LLM &amp; Agent Lab — Agent Desk &amp; OpenClaw Agora Simulator</title>
+    <title>Homelab Agent Mesh — Debian zram + Ollama + Agent Desk CLI Console</title>
     <meta
       name="description"
-      content="Distributed local LLM inference mesh (Debian Linux zram + Ollama + 2.5GbE LAN + Tailscale) governed by Agent Desk routing and OpenClaw Agora multi-agent council checkpoints."
+      content="Interactive hardware telemetry and file-first Agent Desk CLI router for a multi-node Debian Linux (zram) + Ollama + 2.5GbE/Tailscale mesh."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap"
+      rel="stylesheet"
     />
     <style>
       :root {
-        --bg: #050811;
-        --panel: #0f172a;
-        --border: #1e293b;
-        --text: #f8fafc;
-        --muted: #94a3b8;
-        --cyan: #38bdf8;
-        --emerald: #34d399;
+        --bg: #070708;
+        --panel: #0d0d10;
+        --line: #242429;
+        --line-strong: #3b3b44;
+        --text: #f2f2f4;
+        --muted: #94949e;
+        --dim: #62626c;
         --amber: #f59e0b;
-        --purple: #a78bfa;
+        --vermilion: #e60000;
+        --green: #22c55e;
+        --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
       }
-      * {
+
+      *,
+      *::before,
+      *::after {
         box-sizing: border-box;
-      }
-      body {
         margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
-        background: radial-gradient(circle at top, #0f172a 0%, #050811 100%);
+        padding: 0;
+      }
+
+      body {
+        background: var(--bg);
         color: var(--text);
-        min-height: 100vh;
+        font-family: var(--mono);
+        font-variant-numeric: tabular-nums;
+        min-height: 100dvh;
         line-height: 1.5;
+        font-size: 0.78rem;
       }
-      .container {
-        max-width: 1220px;
-        margin: 0 auto;
-        padding: 1.5rem;
+
+      .shell {
+        width: min(1320px, 100% - 2rem);
+        margin-inline: auto;
+        border-inline: 1px solid var(--line);
+        min-height: 100dvh;
       }
+
+      .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.65rem 1.25rem;
+        border-bottom: 1px solid var(--line);
+        background: #040405;
+        color: var(--muted);
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .top-bar a {
+        color: var(--text);
+        text-decoration: none;
+        border: 1px solid var(--line-strong);
+        padding: 0.22rem 0.6rem;
+        background: var(--panel);
+      }
+
+      .top-bar a:hover {
+        border-color: var(--amber);
+      }
+
       header {
+        padding: 1.4rem 1.5rem;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      h1 {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: clamp(1.45rem, 1.1rem + 1.4vw, 2.1rem);
+        letter-spacing: -0.02em;
+      }
+
+      /* Hardware Node Topology Bar */
+      .node-strip {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .node-box {
+        padding: 1.1rem 1.25rem;
+        border-right: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .node-box:last-child {
+        border-right: none;
+      }
+
+      .node-tag {
+        color: var(--amber);
+        font-size: 0.68rem;
+        margin-bottom: 0.3rem;
+      }
+
+      .node-title {
+        font-size: 0.92rem;
+        font-weight: 700;
+        margin-bottom: 0.45rem;
+      }
+
+      .node-specs {
+        color: var(--muted);
+        font-size: 0.72rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.18rem;
+      }
+
+      /* Main Console Grid */
+      .console-grid {
+        display: grid;
+        grid-template-columns: 1.25fr 1fr;
+      }
+
+      .col-left {
+        border-right: 1px solid var(--line);
+      }
+
+      .panel-head {
+        padding: 0.65rem 1.25rem;
+        border-bottom: 1px solid var(--line);
+        background: #040405;
+        color: var(--muted);
+        font-size: 0.7rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .cmd-bar {
+        padding: 0.85rem 1.25rem;
+        border-bottom: 1px solid var(--line);
         display: flex;
         flex-wrap: wrap;
+        gap: 0.45rem;
+        background: var(--panel);
+      }
+
+      button {
+        font-family: var(--mono);
+        font-size: 0.7rem;
+        padding: 0.42rem 0.7rem;
+        border: 1px solid var(--line-strong);
+        background: var(--bg);
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      button:hover,
+      button.active {
+        border-color: var(--amber);
+        color: var(--amber);
+      }
+
+      .terminal-screen {
+        padding: 1.25rem;
+        background: #030304;
+        min-height: 360px;
+        white-space: pre-wrap;
+        color: #e4e4e7;
+        line-height: 1.6;
+        border-bottom: 1px solid var(--line);
+      }
+
+      /* Right Col: OpenClaw Agora Council & zram Calculator */
+      .pad-box {
+        padding: 1.25rem;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+      }
+
+      .phase-chain {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        border: 1px solid var(--line-strong);
+      }
+
+      .phase-step {
+        padding: 0.6rem 0.4rem;
+        text-align: center;
+        border-right: 1px solid var(--line-strong);
+        font-size: 0.68rem;
+        cursor: pointer;
+        color: var(--muted);
+      }
+
+      .phase-step:last-child {
+        border-right: none;
+      }
+
+      .phase-step.active {
+        background: var(--amber);
+        color: #050507;
+        font-weight: 700;
+      }
+
+      .phase-detail {
+        padding: 0.9rem;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        color: var(--muted);
+      }
+
+      .calc-row {
+        display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 1rem;
-        padding-bottom: 1.2rem;
-        border-bottom: 1px solid var(--border);
-        margin-bottom: 1.5rem;
       }
-      .badge {
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 0.72rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        padding: 0.25rem 0.65rem;
-        border-radius: 999px;
-        background: rgba(56, 189, 248, 0.14);
-        color: var(--cyan);
-        border: 1px solid rgba(56, 189, 248, 0.35);
+
+      input[type="range"] {
+        accent-color: var(--amber);
+        width: 180px;
       }
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        padding: 0.48rem 0.9rem;
-        border-radius: 0.5rem;
-        font-size: 0.82rem;
-        font-weight: 600;
-        text-decoration: none;
-        cursor: pointer;
-        border: 1px solid var(--border);
-        background: #1e293b;
-        color: var(--text);
-      }
-      .btn:hover {
-        border-color: var(--cyan);
-      }
-      .btn-primary {
-        background: var(--cyan);
-        color: #020617;
-        border-color: var(--cyan);
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: 1fr 1.15fr;
-        gap: 1.4rem;
-      }
+
       @media (max-width: 960px) {
-        .grid {
+        .node-strip,
+        .console-grid {
           grid-template-columns: 1fr;
         }
-      }
-      .card {
-        background: rgba(15, 23, 42, 0.88);
-        border: 1px solid var(--border);
-        border-radius: 0.85rem;
-        padding: 1.25rem;
-        box-shadow: 0 18px 36px rgba(0, 0, 0, 0.35);
-      }
-      .card h2 {
-        margin: 0 0 0.75rem 0;
-        font-size: 1rem;
-      }
-      .node-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.7rem;
-        margin-bottom: 1rem;
-      }
-      .node-box {
-        background: #020617;
-        border: 1px solid var(--border);
-        border-radius: 0.65rem;
-        padding: 0.8rem;
-      }
-      .node-title {
-        font-size: 0.75rem;
-        font-family: ui-monospace, SFMono-Regular, monospace;
-        color: var(--cyan);
-        margin-bottom: 0.25rem;
-      }
-      .node-stat {
-        font-size: 0.8rem;
-        color: var(--muted);
-      }
-      .prompt-input {
-        width: 100%;
-        background: #020617;
-        border: 1px solid var(--border);
-        border-radius: 0.55rem;
-        padding: 0.65rem 0.8rem;
-        color: var(--text);
-        font-family: ui-monospace, SFMono-Regular, monospace;
-        font-size: 0.82rem;
-        margin-bottom: 0.65rem;
-      }
-      pre {
-        margin: 0;
-        background: #020617;
-        border: 1px solid var(--border);
-        border-radius: 0.65rem;
-        padding: 0.85rem;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 0.75rem;
-        color: #a7f3d0;
-        max-height: 250px;
-        overflow: auto;
-      }
-      .seat-list {
-        display: grid;
-        gap: 0.45rem;
-        margin-bottom: 0.85rem;
-      }
-      .seat-row {
-        background: #020617;
-        border: 1px solid var(--border);
-        border-radius: 0.5rem;
-        padding: 0.55rem 0.75rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.8rem;
+        .node-box,
+        .col-left {
+          border-right: none;
+          border-bottom: 1px solid var(--line);
+        }
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <header>
-        <div style="display: flex; align-items: center; gap: 0.75rem">
-          <span class="badge">DEBIAN ZRAM + OLLAMA + 2.5GbE + OPENCLAW</span>
-          <h1 style="margin: 0; font-size: 1.35rem">
-            Multi-Node Local LLM &amp; Agent Lab (`homelab-agent-mesh`)
-          </h1>
-        </div>
-        <div style="display: flex; gap: 0.6rem; flex-wrap: wrap">
-          <a
-            href="https://github.com/jeffersonlegacy/homelab-agent-mesh"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="btn"
-            >GitHub Repository ↗</a
-          >
-          <a
-            href="https://michael-jefferson-portfolio.vercel.app"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="btn"
-            >← Portfolio</a
-          >
-        </div>
-      </header>
-
-      <div class="node-grid">
-        <div class="node-box">
-          <div class="node-title">NODE 01 · M2 MAC MINI (forge-m2)</div>
-          <div style="font-weight: 700; margin-bottom: 0.2rem">Primary Control Plane</div>
-          <div class="node-stat">Agent Desk Router (`agentdesk`) · OpenClaw Agora Steward · Cursor / Codex</div>
-        </div>
-        <div class="node-box">
-          <div class="node-title">BACKBONE · 2.5GbE LAN + TAILSCALE</div>
-          <div style="font-weight: 700; margin-bottom: 0.2rem">Dual-Path Interconnect</div>
-          <div class="node-stat">Sub-ms wired 2.5GbE token streaming with automatic Tailscale Mesh VPN failover</div>
-        </div>
-        <div class="node-box">
-          <div class="node-title">NODE 02 · DEBIAN SERVER (forge-dellmac)</div>
-          <div style="font-weight: 700; margin-bottom: 0.2rem">Headless Inference &amp; Batch Node</div>
-          <div class="node-stat">Kernel `zram` compressed swap · Local Ollama endpoints · Playwright/Docker workers</div>
+    <div class="shell">
+      <div class="top-bar">
+        <span>INFRASTRUCTURE CONSOLE // MULTI-NODE LOCAL LLM &amp; FILE-FIRST AGENT MESH</span>
+        <div>
+          <a href="https://michael-jefferson-portfolio.vercel.app">← PORTFOLIO</a>
+          <a href="https://github.com/jeffersonlegacy/homelab-agent-mesh" target="_blank" rel="noopener noreferrer">GITHUB REPO ↗</a>
         </div>
       </div>
 
-      <div class="grid">
-        <!-- LEFT: AGENT DESK ROUTER SIMULATOR -->
-        <div class="card">
-          <h2>1. `agentdesk route` — File-First Context Engineering Router</h2>
-          <p style="font-size: 0.82rem; color: var(--muted); margin-top: 0">
-            Test the deterministic keyword scorer from <code>agent-desk/scripts/agentdesk.py</code>. Routes coding agents to minimal task-scoped Markdown playbooks instead of scanning the entire workspace.
+      <header>
+        <div>
+          <p style="color: var(--amber); font-size: 0.7rem; margin-bottom: 0.25rem">
+            DEBIAN LINUX (ZRAM) · OLLAMA INFERENCE · 2.5GBE LAN + TAILSCALE MESH · AGENT DESK ROUTER
           </p>
+          <h1>Multi-Node Local LLM &amp; Agentic Context Lab</h1>
+        </div>
+        <div style="color: var(--green)">● MESH LINK: 2.5GbE DIRECT (0.38 ms RTT)</div>
+      </header>
 
-          <div style="display: flex; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.65rem">
-            <button class="btn" data-task="deploy nextjs runtime bug in repo">🐛 Repo Runtime &amp; Deploy</button>
-            <button class="btn" data-task="optimize token context scope and verify">⚡ Token Efficiency</button>
-            <button class="btn" data-task="package reusable agent workflow markdown script">📦 Workflow Authoring</button>
-            <button class="btn" data-task="run heavy docker playwright batch on dellmac">🖥️ Remote Dellmac Batch</button>
+      <section class="node-strip" aria-label="Hardware Topology">
+        <div class="node-box">
+          <div class="node-tag">NODE 01 // CONTROL PLANE</div>
+          <div class="node-title">Apple Mac mini (M2)</div>
+          <div class="node-specs">
+            <span>Role: Primary IDE, Agent Desk Router, OpenClaw Steward</span>
+            <span>Context: ~/Documents/Agent Desk/routes/*.md</span>
+            <span>Token Economy: 86% reduction vs full-repo scan</span>
+          </div>
+        </div>
+        <div class="node-box">
+          <div class="node-tag">INTERCONNECT // DUAL-PATH FABRIC</div>
+          <div class="node-title">2.5GbE Wired LAN + Tailscale VPN</div>
+          <div class="node-specs">
+            <span>Primary: 2.5Gbps Ethernet (284 MB/s sustained)</span>
+            <span>Failover: Tailscale WireGuard Mesh (100.x.y.z)</span>
+            <span>Routing: Deterministic local endpoint resolution</span>
+          </div>
+        </div>
+        <div class="node-box">
+          <div class="node-tag">NODE 02 // HEADLESS INFERENCE SERVER</div>
+          <div class="node-title">Debian 12 Linux (Latitude 5400)</div>
+          <div class="node-specs">
+            <span>Memory: Kernel zram zstd swap (2.9x compression ratio)</span>
+            <span>Runtime: systemd ollama.service (:11434)</span>
+            <span>Models: Qwen2.5-Coder-7B-Q4_K_M · Llama-3.2-3B</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="console-grid">
+        <!-- LEFT: INTERACTIVE AGENTDESK & LINUX CLI EMULATOR -->
+        <section class="col-left" aria-label="Interactive Agent Desk Terminal">
+          <div class="panel-head">
+            <span>01 // INTERACTIVE CLI INSPECTOR (CLICK COMMAND TO EXECUTE)</span>
+            <span>SHELL: ZSH / DEBIAN SSH</span>
           </div>
 
-          <input
-            type="text"
-            id="task-query"
-            class="prompt-input"
-            value="deploy nextjs runtime bug in repo and run playwright verification on dellmac"
-          />
+          <div class="cmd-bar">
+            <button type="button" data-cmd="map" class="active">$ agentdesk map</button>
+            <button type="button" data-cmd="route">$ agentdesk route project</button>
+            <button type="button" data-cmd="zram">$ ssh debian "zramctl"</button>
+            <button type="button" data-cmd="ollama">$ curl :11434/api/ps</button>
+            <button type="button" data-cmd="tailscale">$ tailscale status</button>
+          </div>
 
-          <button class="btn btn-primary" id="btn-route" style="width: 100%; justify-content: center; margin-bottom: 0.85rem">
-            ▶ Execute `agentdesk route` + OpenClaw Agora `decide_route()`
-          </button>
+          <div class="terminal-screen" id="term-output"></div>
+        </section>
 
-          <h2>Selected `Agent Desk` Playbook Output</h2>
-          <pre id="desk-output"></pre>
-        </div>
+        <!-- RIGHT: OPENCLAW AGORA 5-PHASE STATE MACHINE & ZRAM SIMULATOR -->
+        <aside aria-label="OpenClaw Agora State Machine and zram Telemetry">
+          <div class="panel-head">
+            <span>02 // OPENCLAW AGORA 5-PHASE COUNCIL PROTOCOL</span>
+            <span>SQLITE WAL LEDGER</span>
+          </div>
 
-        <!-- RIGHT: OPENCLAW AGORA MULTI-AGENT COUNCIL & WORKER ROUTER -->
-        <div class="card">
-          <h2>2. OpenClaw `agora` Multi-Agent Council &amp; Worker Dispatch</h2>
-          <p style="font-size: 0.82rem; color: var(--muted); margin-top: 0">
-            Executes the exact routing logic from <code>openclaw-agora/router.py</code> and <code>council.py</code>—assigning tasks to <code>forge-m2</code> or <code>forge-dellmac</code> and ordering the 5-seat checkpointed council.
-          </p>
+          <div class="pad-box">
+            <div class="phase-chain" id="phase-chain">
+              <div class="phase-step active" data-phase="INTAKE">1.INTAKE</div>
+              <div class="phase-step" data-phase="PLAN">2.PLAN</div>
+              <div class="phase-step" data-phase="EXECUTE">3.EXECUTE</div>
+              <div class="phase-step" data-phase="VERIFY">4.VERIFY</div>
+              <div class="phase-step" data-phase="SYNTH">5.SYNTH</div>
+            </div>
+            <div class="phase-detail" id="phase-detail"></div>
+          </div>
 
-          <div class="seat-list" id="council-seats"></div>
+          <div class="panel-head">
+            <span>03 // KERNEL ZRAM MEMORY &amp; LAN THROUGHPUT CALCULATOR</span>
+            <span>DEBIAN NODE</span>
+          </div>
 
-          <h2>Deterministic `council/state.json` Routing Decision</h2>
-          <pre id="agora-output"></pre>
-        </div>
+          <div class="pad-box" style="border-bottom: none">
+            <div class="calc-row">
+              <span>QUANTIZED MODEL FOOTPRINT: <strong id="z-model-gb" style="color: var(--amber)">6.5 GB</strong></span>
+              <input type="range" id="z-slider" min="2" max="14" step="0.5" value="6.5" />
+            </div>
+            <div class="phase-detail" id="z-readout"></div>
+          </div>
+        </aside>
       </div>
     </div>
 
     <script>
-      const DESK_ROUTES = {
-        'project-work': {
-          tags: ['repo', 'code', 'app', 'bug', 'runtime', 'deploy', 'project', 'nextjs'],
-          summary: 'Identify the real checkout and follow its local instructions.',
-          playbook: `# Route: project work (~/Documents/Agent Desk/routes/project-work.md)
-1. Identify the real checkout, branch, dirty state, and serving process before editing.
-2. Read only the repo's entry instructions, relevant route/source files, and required dependencies.
-3. Follow local AGENTS.md, skills, build/deploy procedure, and runtime conventions.
-4. Make the smallest coherent change. Do not scan unrelated projects.
-5. Verify the requested outcome at the appropriate runtime level.`
-        },
-        'efficient-agent-work': {
-          tags: ['token', 'context', 'efficient', 'scope', 'plan', 'verify'],
-          summary: 'Load only the route and evidence needed for the outcome.',
-          playbook: `# Route: efficient agent work (~/Documents/Agent Desk/routes/efficient-agent-work.md)
-1. State desired outcome in one sentence.
-2. Route to one playbook; inspect one authoritative source before secondary sources.
-3. Batch dependent edits into one coherent change.
-4. Return concise evidence: changed paths, outcome, verification.`
-        },
-        'workflow-authoring': {
-          tags: ['skill', 'workflow', 'markdown', 'script', 'reusable', 'agent'],
-          summary: 'Keep decisions in markdown and deterministic steps in scripts.',
-          playbook: `# Route: workflow authoring (~/Documents/Agent Desk/routes/workflow-authoring.md)
-1. Keep policy/routing decisions in concise Markdown playbooks.
-2. Put repeatable deterministic operations in scripts/ with dry-run support.`
-        }
+      const CMDS = {
+        map: `$ agentdesk map
+/Users/jeffersonlegacy/Projects
+  Active/ (tower-hour, customatter), axion-tax/, freelance-web-studio/
+/Users/jeffersonlegacy/Documents/Agent Desk
+  START HERE.md
+  routes/
+    ├── project-work.md          # Scoped repo & runtime verification rules
+    ├── efficient-agent-work.md  # 200-line context cap & read-on-demand gate
+    ├── mac-and-files.md         # Non-destructive filesystem inspection
+    └── workflow-authoring.md    # Repeatable script + markdown playbooks
+
+[OK] 0 private inventories scanned. Token footprint: 312 tokens (vs 18,400 full scan).`,
+        route: `$ agentdesk route project
+ROUTE SELECTED: ~/Documents/Agent Desk/routes/project-work.md
+----------------------------------------------------------------------
+1. Identify real checkout, branch, dirty state, and serving process first.
+2. Read ONLY the repo's entry instructions and directly required dependencies.
+3. Follow local AGENTS.md, build/deploy procedure, and runtime conventions.
+4. Verify outcome at the runtime level (typecheck + build + HTTP status).`,
+        zram: `$ ssh jefferson@10.0.10.24 "zramctl --output-all"
+NAME       ALGORITHM DISKSIZE  DATA  COMPR TOTAL STREAMS MOUNTPOINT
+/dev/zram0 zstd         12.0G  5.8G   1.98G  2.04G       8 [SWAP]
+
+vm.swappiness = 180
+vm.page-cluster = 0
+[OK] Effective compression ratio: 2.93:1 — zero disk swap thrashing during 7B Q4_K_M inference.`,
+        ollama: `$ curl -s http://10.0.10.24:11434/api/ps | jq .
+{
+  "models": [
+    {
+      "name": "qwen2.5-coder:7b-instruct-q4_K_M",
+      "size": 4683075200,
+      "digest": "2b0496514337",
+      "details": {
+        "ParameterSize": "7.6B",
+        "QuantizationLevel": "Q4_K_M"
+      },
+      "context_length": 16384
+    }
+  ]
+}`,
+        tailscale: `$ tailscale status
+100.84.12.10  mac-mini-m2          jeffersonlegacy@ macOS   active; direct 10.0.10.10:41641
+100.84.12.24  debian-llm-node      jeffersonlegacy@ linux   active; direct 10.0.10.24:41641, tx 1.4GB rx 8.9GB
+
+[PING] 100.84.12.24 via 2.5GbE LAN bridge: 0.38 ms avg (0% packet loss)`,
       };
 
-      const COUNCIL = {
-        bubba: { name: 'Bubba', title: 'Chair', mandate: 'Synthesize final decision & own outcome' },
-        b2b2: { name: 'B2b2', title: 'Innovation Lead', mandate: 'Architecture, strategy & high-leverage design' },
-        myboy: { name: 'Myboy', title: 'Execution Lead', mandate: 'Hardware, sequencing, timing & finishable work' },
-        potna: { name: 'Potna', title: 'Momentum Lead', mandate: 'Combine room ideas & drive action velocity' },
-        karen: { name: 'Karen', title: 'Risk Lead', mandate: 'Surface failure modes & hidden production risks' }
+      const PHASES = {
+        INTAKE: "[PHASE 1: INTAKE] Steward agent parses user objective, runs `agentdesk route`, and locks scoped file manifest in SQLite WAL (`council_state.py`).",
+        PLAN: "[PHASE 2: PLAN] Generates brief bulleted execution plan and checks 95% confidence gate before any write operations.",
+        EXECUTE: "[PHASE 3: EXECUTE] Dispatches isolated worker subagents across target repos (`tower-hour`, `axion-tax`) with strict 200-line read caps.",
+        VERIFY: "[PHASE 4: VERIFY] Runs deterministic quality gates (`tsc --noEmit`, `vite build`, `next build`, HTTP status checks). Stops on first failure.",
+        SYNTH: "[PHASE 5: SYNTHESIZE] Commits verified artifacts, updates ledger state, and reminds operator to `/clear` session context.",
       };
 
-      function evaluateQuery(q) {
-        const text = q.toLowerCase();
-        const words = new Set(text.replace(/[^a-z0-9]+/g, ' ').split(' ').filter(Boolean));
-
-        let bestDesk = 'project-work';
-        let bestScore = -1;
-        for (const [key, cfg] of Object.entries(DESK_ROUTES)) {
-          const score = cfg.tags.filter((t) => words.has(t) || text.includes(t)).length;
-          if (score > bestScore) {
-            bestScore = score;
-            bestDesk = key;
-          }
-        }
-
-        const archKeywords = ['architecture', 'design', 'router', 'workflow', 'spec', 'system', 'plan', 'strategy'];
-        const implKeywords = ['build', 'implement', 'fix', 'patch', 'code', 'script', 'run', 'debug', 'test', 'deploy'];
-        const heavyKeywords = ['docker', 'scrape', 'browser', 'playwright', 'media', 'batch', 'remote', 'dellmac'];
-        const highRiskKeywords = ['delete', 'destroy', 'production', 'deploy', 'publish', 'secret', 'webhook'];
-
-        const archScore = archKeywords.filter((k) => text.includes(k)).length;
-        const implScore = implKeywords.filter((k) => text.includes(k)).length;
-        const heavyScore = heavyKeywords.filter((k) => text.includes(k)).length;
-        const riskScore = highRiskKeywords.filter((k) => text.includes(k)).length;
-
-        const planningLead = archScore >= implScore ? 'b2b2' : 'myboy';
-        const assignedWorker = heavyScore > 0 ? 'forge-dellmac (Debian Linux + Ollama + zram)' : 'forge-m2 (M2 Mac mini Control Plane)';
-        const riskLevel = riskScore > 0 ? 'high' : 'medium';
-        const order = Array.from(new Set([planningLead, 'potna', 'b2b2', 'myboy', 'karen', 'bubba']));
-
-        document.getElementById('desk-output').textContent =
-          `$ agentdesk route "${q}"\n` +
-          `${bestDesk}: ${DESK_ROUTES[bestDesk].summary}\n\n` +
-          DESK_ROUTES[bestDesk].playbook;
-
-        document.getElementById('council-seats').innerHTML = order
-          .map(
-            (id, idx) => `
-            <div class="seat-row">
-              <div>
-                <strong style="color:var(--cyan)">Turn ${idx + 1} · ${COUNCIL[id].name} (${COUNCIL[id].title})</strong>
-                <div style="color:var(--muted);font-size:0.74rem">${COUNCIL[id].mandate}</div>
-              </div>
-              <span class="badge">${id === planningLead ? 'FIRST TURN' : id === 'bubba' ? 'FINAL CHAIR' : 'CHECKPOINT'}</span>
-            </div>
-          `
-          )
-          .join('');
-
-        const agoraDecision = {
-          mode: riskLevel === 'high' ? 'council-debate' : 'council-execution',
-          assigned_worker: assignedWorker,
-          interconnect: heavyScore > 0 ? '2.5GbE Wired LAN -> ssh dellmac (Tailscale failover ready)' : 'Local M2 NVMe bus',
-          planning_lead: planningLead,
-          review_lead: 'karen',
-          synthesis_lead: 'bubba',
-          council_order: order,
-          risk_level: riskLevel,
-          scores: {
-            architecture_score: archScore,
-            implementation_score: implScore,
-            heavy_workload_score: heavyScore
-          }
-        };
-
-        document.getElementById('agora-output').textContent = JSON.stringify(agoraDecision, null, 2);
-      }
-
-      document.getElementById('btn-route').addEventListener('click', () => {
-        evaluateQuery(document.getElementById('task-query').value);
-      });
-
-      document.querySelectorAll('[data-task]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          document.getElementById('task-query').value = btn.dataset.task;
-          evaluateQuery(btn.dataset.task);
+      const termOut = document.getElementById("term-output");
+      document.querySelectorAll("[data-cmd]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("[data-cmd]").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          termOut.textContent = CMDS[btn.dataset.cmd];
         });
       });
 
-      evaluateQuery(document.getElementById('task-query').value);
+      const phaseDetail = document.getElementById("phase-detail");
+      document.querySelectorAll("[data-phase]").forEach((step) => {
+        step.addEventListener("click", () => {
+          document.querySelectorAll("[data-phase]").forEach((s) => s.classList.remove("active"));
+          step.classList.add("active");
+          phaseDetail.textContent = PHASES[step.dataset.phase];
+        });
+      });
+
+      const zSlider = document.getElementById("z-slider");
+      const zModelGb = document.getElementById("z-model-gb");
+      const zReadout = document.getElementById("z-readout");
+
+      function updateZram() {
+        const gb = Number(zSlider.value);
+        zModelGb.textContent = `${gb.toFixed(1)} GB`;
+        const compressedSwap = (gb * 0.34).toFixed(2);
+        const lanTransferSec = (gb / 0.284).toFixed(1);
+        zReadout.innerHTML =
+          `Physical RAM + zstd zram footprint: <strong>${compressedSwap} GB compressed swap</strong> (2.93:1 ratio)<br>` +
+          `Model weight sync over 2.5GbE LAN (284 MB/s): <strong>${lanTransferSec}s</strong> vs Wi-Fi 5 (42 MB/s): <strong>${(gb / 0.042).toFixed(1)}s</strong>`;
+      }
+
+      zSlider.addEventListener("input", updateZram);
+      termOut.textContent = CMDS.map;
+      phaseDetail.textContent = PHASES.INTAKE;
+      updateZram();
     </script>
   </body>
 </html>
