@@ -1,11 +1,11 @@
-# Multi-Node Local LLM & Agent Lab — Distributed Local Inference & Context Mesh
+# Mike Mac Mesh — Multi-Node Local LLM & Multi-Device Mesh
 
-> **Architecture:** Headless Debian Linux Server (`zram`-Tuned) + Local Ollama Inference + 2.5GbE LAN / Tailscale Mesh VPN + File-First Multi-Agent Context Architecture (`OpenClaw` / `Codex` / `Cursor`)  
+> **Architecture:** Apple M2 Mac mini Workstation + Headless Debian Linux Server (`zram`-Tuned) + Local Ollama Inference + 2.5GbE LAN / Tailscale Mesh VPN + File-First Multi-Agent Context Architecture (`OpenClaw` / `Codex` / `Cursor`)  
 
 ## 1. Executive Summary & Problem Statement
 Cloud-only LLM development workflows introduce recurring API cost spikes, data privacy constraints, and severe context drift across long-running multi-repository engineering sessions.
 
-The **Multi-Node Local LLM & Agent Lab** offloads routine inference, background automation, and local model evaluation to a dedicated headless **Debian Linux server** connected via **2.5GbE LAN** and **Tailscale mesh VPN** to an **M2 Mac mini** workstation, governed by a deterministic, file-first Markdown routing system (`Agent Desk`).
+**Mike Mac Mesh** links all home computing devices into a unified, low-latency, privacy-first local AI mesh. It offloads routine inference, background automation, and local model evaluation to a dedicated headless **Debian Linux server** connected via **2.5GbE LAN** and **Tailscale mesh VPN** to an **M2 Mac mini** workstation, governed by a deterministic, file-first Markdown routing system (`Agent Desk`).
 
 ---
 
@@ -59,7 +59,7 @@ graph LR
 ## 4. Infrastructure Layout
 
 ```text
-homelab-agent-mesh/
+mike-mac-mesh/
 ├── ~/Documents/Agent Desk/
 │   ├── START HERE.md           # Top-level Finder & CLI routing index
 │   └── routes/
